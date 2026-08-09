@@ -73,10 +73,9 @@ def worst_case_sensitivity(theta, Phi, p_lo, p_hi, n_grid=5):
 
 def optimize_noise_sensitivity(
     d, p_lo, p_hi, theta_init=None, Phi_init=None,
-    n_grid=5, steps=200, lr=0.05, verbose=True, seed=0,
+    n_grid=5, outer_steps=20, max_iter=20, lr=1.0, verbose=True, #seed=0,
 ):
-    torch.manual_seed(seed)
-
+ 
     theta = torch.tensor(
         0.3 if theta_init is None else float(theta_init), requires_grad=True
     )
@@ -84,18 +83,26 @@ def optimize_noise_sensitivity(
         Phi = (0.1 * torch.randn(d + 1)).requires_grad_(True)
     else:
         Phi = torch.tensor(Phi_init, dtype=torch.float64, requires_grad=True)
-
-    opt = torch.optim.Adam([theta, Phi], lr=lr)
-
-    L = None
-    for step in range(steps):
+ 
+    opt = torch.optim.LBFGS([theta, Phi], lr=lr, max_iter=max_iter,
+                             line_search_fn="strong_wolfe")
+ 
+    L_holder = {}
+ 
+    def closure():
         opt.zero_grad()
         L = worst_case_sensitivity(theta, Phi, p_lo, p_hi, n_grid=n_grid)
-        (-L).backward()
-        opt.step()
-        if verbose and (step % 20 == 0 or step == steps - 1):
-            print(f"step {step:4d}  L_E = {L.item():.4f}  theta = {theta.item():.4f}")
-
-    L_E = L.item()
+        loss = -L
+        loss.backward()
+        L_holder["L"] = L.item()
+        return loss
+ 
+    for step in range(outer_steps):
+        opt.step(closure)
+        if verbose:
+            print(f"outer step {step:3d}  L_E = {L_holder['L']:.4f}  theta = {theta.item():.4f}")
+ 
+    L_E = L_holder["L"]
     kappa = L_E / d
     return theta.item(), Phi.detach().numpy(), L_E, kappa
+
