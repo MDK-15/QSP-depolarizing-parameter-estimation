@@ -23,12 +23,7 @@ def depolarizing_channel(rho, p):
     K2 = np.sqrt(p/3) * Y
     K3 = np.sqrt(p/3) * Z
 
-    return (
-        K0 @ rho @ K0.conj().T +
-        K1 @ rho @ K1.conj().T +
-        K2 @ rho @ K2.conj().T +
-        K3 @ rho @ K3.conj().T
-    )
+    return (K0 @ rho @ K0.conj().T + K1 @ rho @ K1.conj().T + K2 @ rho @ K2.conj().T + K3 @ rho @ K3.conj().T)
 
 def build_rho(theta, Phi, p, rho):
     rho = rot_X(Phi[0]) @ rho @ rot_X(Phi[0]).conj().T
@@ -41,8 +36,8 @@ def build_rho(theta, Phi, p, rho):
 def hadamard_gate():
     return (1/np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype=complex)
 
-def QSP_PE_single_iteration(mk, C, dk, rk_prev, q, p_real, p_prev, rho):
-    theta, Phi, L_E, kappa = optimize_noise_sensitivity(d=dk, p_lo=p_prev-rk_prev, p_hi=p_prev+rk_prev)
+def QSP_single_iteration(mk, C, dk, rk_prev, q, p_real, p_prev, rho):
+    theta, Phi, L_E, kappa = optimize_noise_sensitivity(d=dk, p_lo=p_prev-rk_prev, p_hi=p_prev+rk_prev, n_grid=20)
 
     rho = build_rho(theta, Phi, p_real, rho)
     prob0 = float(np.clip(rho[0,0].real, 0.0, 1.0))
